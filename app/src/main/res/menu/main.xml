@@ -1,0 +1,13 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    
+	<item 
+		android:id="@+id/STATUS" 
+		android:orderInCategory="100" 
+		android:showAsAction="always"
+		android:title="status"/> 
+	
+    <item
+        android:id="@+id/item"
+        android:title="Item"/>
+    
+</menu>
