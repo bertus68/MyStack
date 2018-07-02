@@ -10,6 +10,8 @@ import android.webkit.*;
 import java.io.*;
 import android.view.*;
 import a.polverini.my.MainActivity.*;
+import android.graphics.*;
+import android.graphics.drawable.*;
 
 public class MainActivity extends Activity 
 {
@@ -17,17 +19,46 @@ public class MainActivity extends Activity
 	private HtmlHandler handler;
 	private ProgressBar progress; 
 	private WebView webView;
-	
-	Stack stack;
-
 	private Menu menu;
+	
+	private Stack stack;
 	
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.splash);
-		new SplashTask().execute(R.layout.main);
+		new AsyncTask() {
+
+			@Override
+			protected Object doInBackground(Object[] args)
+			{
+				try {
+					Thread.sleep(1000);
+				} catch (InterruptedException e) {}
+				return args[0];
+			}
+
+			@Override
+			public void onPostExecute(Object result) {
+				setContentView(result);
+
+				progress = findViewById(R.id.PROGRESS);
+
+				webView = findViewById(R.id.WEBVIEW);
+				webView.getSettings().setJavaScriptEnabled(true);
+				webView.getSettings().setBuiltInZoomControls(true);
+				webView.setWebViewClient(new MyWebViewClient());
+				
+				handler = new HtmlHandler(webView);
+				print("<h1>MyStack v0.1.0</h1>");
+				print("A.Polverini (2018)<p/>");
+				
+				
+				//test();
+			}
+
+		}.execute(R.layout.main);
 		
 		stack = new Stack();
 	}
@@ -38,12 +69,32 @@ public class MainActivity extends Activity
 		this.menu = menu;
 		return true;
 	}
+	
+	boolean play;
+	boolean pause;
+	boolean stop;
 
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
+		
+		int color = 0xFFFF0000;
+		final PorterDuffColorFilter filter = new PorterDuffColorFilter(color, PorterDuff.Mode.MULTIPLY);
+		
 		try {
 			switch (item.getItemId()) {
 				case R.id.STATUS:
+					break;
+				case R.id.PLAY:
+					play = !play;
+					command("color "+R.id.PLAY+" "+(play?0xFFFF0000:0xFF000000));
+					break;
+				case R.id.PAUSE:
+					pause = !pause;
+					command("color "+R.id.PAUSE+" "+(pause?0xFF00FF00:0xFF000000));
+					break;
+				case R.id.STOP:
+					stop = !stop;
+					command("color "+R.id.STOP+" "+(stop?0xFF0000FF:0xFF000000));
 					break;
 				default:
 					return super.onOptionsItemSelected(item);
@@ -64,12 +115,11 @@ public class MainActivity extends Activity
 				public void statusChanged(StackStatus status)
 				{
 					println("status = %s", status);
-					MenuItem item = menu.findItem(R.id.STATUS);
-					item.setTitle(status.toString());
+					command("status "+status.toString());
 				}
 
 				@Override
-				public void confirmationRequest(MainActivity.Stack.StackEntry entry)
+				public void confirmationRequest(StackEntry entry)
 				{
 					// TODO: Implement this method
 				}
@@ -82,7 +132,7 @@ public class MainActivity extends Activity
 			} catch (Exception e) {
 				print(e);
 			} finally {
-				dump();
+				if(verbose) dump();
 			}
 			
 			control.subscribe();
@@ -96,27 +146,27 @@ public class MainActivity extends Activity
 			} catch (Exception e) {
 				print(e);
 			} finally {
-				dump();
+				if(verbose) dump();
 			}
 			
 			try {
-				println("setDispatchTime 1 +20s...");
-				control.setDispatchTime(1, new RelativeTime(20000));
+				println("setDispatchTime 1 +3s...");
+				control.setDispatchTime(1, new RelativeTime(3000));
 			} catch (Exception e) {
 				print(e);
 			} finally {
-				dump();
+				if(verbose) dump();
 			}
 			
 			try {
 				println("addRequest \"E\" in given position (1)...");
 				control.addRequest(new Request("E"), 1);
-				println("setDispatchTime 1 +30s...");
-				control.setDispatchTime(1, new RelativeTime(30000));
+				println("setDispatchTime 1 +5s...");
+				control.setDispatchTime(1, new RelativeTime(5000));
 			} catch (Exception e) {
 				print(e);
 			} finally {
-				dump();
+				if(verbose) dump();
 			}
 			
 			try {
@@ -125,7 +175,7 @@ public class MainActivity extends Activity
 			} catch (Exception e) {
 				print(e);
 			} finally {
-				dump();
+				if(verbose) dump();
 			}
 			
 			stack.start();
@@ -220,6 +270,13 @@ public class MainActivity extends Activity
 	interface IStackControl extends IStackEditor {
 		public void subscribe() throws Exception;
 		public void unsubscribe();
+		public void start();
+		public void stop();
+		public void pause();
+		public void resume();
+		public void arm();
+		public void disarm();
+		public void go();
 	}
 	
 	interface IStackControlListener extends IStackListener {
@@ -244,45 +301,44 @@ public class MainActivity extends Activity
 		
 		@Override
 		public void subscribe() throws Exception {
-			println(TAG+".subscribe()");
+			if(verbose) println(TAG+".subscribe()");
 			stack.addListener(listener);
 			stack.setStatus(StackStatus.EDITING);
 		}
 
 		@Override
 		public void unsubscribe() {
-			println(TAG+".unsubscribe()");
+			if(verbose) println(TAG+".unsubscribe()");
 			stack.removeListener(listener);
 		}
 		
 		@Override
 		public void addRequest(Request request, int position) throws NotAllowedException, IllegalArgument {
-			println(TAG+".addRequest()");
+			if(verbose) println(TAG+".addRequest()");
 			stack.addRequest(request, position);
 		}
 		
 		@Override
 		public void deleteRequests(int start, int end) throws NotAllowedException, IllegalArgument {
-			println(TAG+".addRequest()");
+			if(verbose) println(TAG+".addRequest()");
 			stack.deleteRequests(start, end) ;
 		}
 		
 		@Override
 		public void copyRequests(int start, int end, int position) throws NotAllowedException, IllegalArgument {
-			println(TAG+".addRequest()");
+			if(verbose) println(TAG+".addRequest()");
 			stack.copyRequests(start, end, position);
 		}
 		
 		@Override
 		public void moveRequests(int start, int end, int position) throws NotAllowedException, IllegalArgument {
-			println(TAG+".addRequest()");
+			if(verbose) println(TAG+".addRequest()");
 			stack.moveRequests(start, end, position);
 		}
 
 		@Override
-		public void setDispatchTime(int position, Time dispatchTime) throws NotAllowedException, IllegalArgument
-		{
-			println(TAG+".addRequest()");
+		public void setDispatchTime(int position, Time dispatchTime) throws NotAllowedException, IllegalArgument {
+			if(verbose) println(TAG+".addRequest()");
 			stack.setDispatchTime(position, dispatchTime);
 		}
 		
@@ -290,28 +346,68 @@ public class MainActivity extends Activity
 	
 	class StackControlService extends StackEditorService implements IStackControl
 	{
+
 		private static final String TAG = "StackControlService";
 		
 		private IStackControlListener listener;
 		
 		public StackControlService(IStackControlListener listener) {
 			super(listener);
-			
 			this.listener = listener;
 		}
 		
 		@Override
 		public void subscribe() throws Exception {
-			println(TAG+".subscribe()");
+			if(verbose) println(TAG+".subscribe()");
 			super.subscribe();
 			stack.addListener(listener);
 		}
 
 		@Override
 		public void unsubscribe() {
-			println(TAG+".unsubscribe()");
+			if(verbose) println(TAG+".unsubscribe()");
 			super.unsubscribe();
 			stack.removeListener(listener);
+		}
+		
+		@Override
+		public void start() {
+			stack.start();
+		}
+		
+		@Override
+		public void stop() {
+			stack.stop();
+		}
+
+		@Override
+		public void pause()
+		{
+			// TODO: Implement this method
+		}
+
+		@Override
+		public void resume()
+		{
+			// TODO: Implement this method
+		}
+
+		@Override
+		public void arm()
+		{
+			// TODO: Implement this method
+		}
+
+		@Override
+		public void disarm()
+		{
+			// TODO: Implement this method
+		}
+
+		@Override
+		public void go()
+		{
+			// TODO: Implement this method
 		}
 		
 	}
@@ -328,13 +424,13 @@ public class MainActivity extends Activity
 		
 		@Override
 		public void subscribe() throws Exception {
-			println(TAG+".subscribe()");
+			if(verbose) println(TAG+".subscribe()");
 			stack.addListener(listener);
 		}
 
 		@Override
 		public void unsubscribe() {
-			println(TAG+".unsubscribe()");
+			if(verbose) println(TAG+".unsubscribe()");
 			stack.removeListener(listener);
 		}
 
@@ -358,7 +454,7 @@ public class MainActivity extends Activity
 		}
 	}
 	
-	class Stack extends Thread {
+	class Stack implements Runnable {
 		
 		private static final String TAG = "Stack";
 		
@@ -374,12 +470,13 @@ public class MainActivity extends Activity
 			READY,
 			ARMED,
 			DISPATCHING,
+			PAUSED
 		} 
 		
-		StackStatus status = StackStatus.IDLE;
+		private StackStatus status = StackStatus.IDLE;
 		
 		public void setStatus(StackStatus status ) {
-			println(TAG+".setStatus(status=%s)",status.toString());
+			if(verbose) println(TAG+".setStatus(status=%s)",status.toString());
 			this.status = status;
 			for(IStackListener listener : listeners) {
 				listener.statusChanged(status);
@@ -389,14 +486,14 @@ public class MainActivity extends Activity
 		private Vector<IStackListener> listeners = new Vector<>();
 
 		void addListener(IStackListener listener) {
-			println(TAG+".addListener(listener)");
+			if(verbose) println(TAG+".addListener(listener)");
 			if(!listeners.contains(listener)) {
 				listeners.add(listener);
 			}
 		}
 
 		void removeListener(IStackListener listener) {
-			println(TAG+".removeListener(listener)");
+			if(verbose) println(TAG+".removeListener(listener)");
 			if(listeners.contains(listener)) {
 				listeners.remove(listener);
 			}
@@ -534,17 +631,20 @@ public class MainActivity extends Activity
 			entries.elementAt(position-1).setDispatchTime(dispatchTime);
 		}
 		
-		private boolean running;
+		private boolean running = false;
+		private Thread runner = null;
+		private Thread holder = null;
 		
 		@Override
 		public void run() {
 			running = true;
 			try {
-				setStatus(StackStatus.READY);
+				setStatus(StackStatus.DISPATCHING);
 				int index = 1;
 				while(running) {
-					if(index>=entries.size()) break;
+					if(index>entries.size()) break;
 					StackEntry entry = entries.get(index - 1);
+					
 					Time dispatchTime = entry.getDispatchTime();
 					if(dispatchTime!=null) {
 						if(dispatchTime instanceof RelativeTime) {
@@ -552,11 +652,24 @@ public class MainActivity extends Activity
 							Thread.sleep(((RelativeTime)dispatchTime).get());
 						}
 					}
+					/*
+					if(status==StackStatus.PAUSED) {
+						if(holder!=null) {
+							try {
+								holder.join();
+							} catch(InterruptedException e) {
+								// nothing
+							}
+						}
+					}
+					*/
 					println("dispatching...%s",entry.getRequest().toString());
 					index++;
 				}
-			} catch(InterruptedException e) {
-				// nothing
+			//} catch(InterruptedException e) {
+			//	print(e);
+			} catch(Exception e) {
+				print(e);
 			} finally {
 				setStatus(StackStatus.EDITING);
 			}
@@ -565,43 +678,49 @@ public class MainActivity extends Activity
 		}
 		
 		public void start() {
-			if(!running) {
-				super.start();
+			if(runner==null) {
+				runner = new Thread(this);
+				runner.start();
 			}
 		}
 		
-	}
-	
-	class SplashTask extends AsyncTask {
+		public void stop() {
+			if(runner!=null) {
+				try {
+					running = false;
+					runner.join(1000, 0);
+					if (runner.isAlive()) {
+						runner.interrupt();
+					}
+				} catch (InterruptedException e) {
+					// nothing
+				}
+				runner = null;
+			}
+		}
+		
+		public void pause() {
+			if(holder==null) {
+				holder = new Thread() {
+					@Override
+					public void run() {
+						try {
+							join();
+						} catch (InterruptedException e) {
 
-		@Override
-		protected Object doInBackground(Object[] args)
-		{
-			try {
-				Thread.sleep(3000);
-			} catch (InterruptedException e) {}
-			return args[0];
+						}
+					}
+				};
+				runner.start();
+			}
 		}
 
-		@Override
-		public void onPostExecute(Object result) {
-			setContentView(result);
-			
-			progress = findViewById(R.id.PROGRESS);
-
-			webView = findViewById(R.id.WEBVIEW);
-			webView.getSettings().setJavaScriptEnabled(true);
-			webView.getSettings().setBuiltInZoomControls(true);
-			webView.setWebViewClient(new MyWebViewClient());
-			// webView.addJavascriptInterface(new MyWebAppInterface(MainActivity.this), "webAppInterface"); 
-
-			handler = new HtmlHandler(webView);
-			print("<h1>MyStack v0.1.0</h1>");
-			print("A.Polverini (2018)<p/>");
-			
-			test();
+		public void resume() {
+			if(holder!=null) {
+				holder.interrupt();
+				holder = null;
+			}
 		}
-
 	}
 
 	public class MyWebAppInterface {
@@ -653,6 +772,24 @@ public class MainActivity extends Activity
 							case "load":
 								if(args.length>1) {
 									view.loadUrl(args[1]);
+								}
+								break;
+							case "status":
+								if(args.length>1) {
+									MenuItem item = menu.findItem(R.id.STATUS);
+									item.setTitle(args[1]);
+								}
+								break;
+							case "color":
+								if(args.length>2) {
+									int id = Integer.parseInt(args[1]);
+									int color = Integer.parseInt(args[2]);
+									try {
+										MenuItem item = menu.findItem(id);
+										item.getIcon().setTint(color);
+									} catch(Exception e) {
+										print(e);
+									}
 								}
 								break;
 							default:

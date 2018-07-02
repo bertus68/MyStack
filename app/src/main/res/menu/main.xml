@@ -1,10 +1,31 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
-    
+
 	<item 
 		android:id="@+id/STATUS" 
 		android:orderInCategory="100" 
 		android:showAsAction="always"
 		android:title="status"/> 
+
+	<item 
+		android:id="@+id/PLAY" 
+		android:orderInCategory="201" 
+		android:showAsAction="always"
+		android:icon="@drawable/play"
+		android:title="PLAY"/> 
+
+	<item 
+		android:id="@+id/PAUSE" 
+		android:orderInCategory="202" 
+		android:showAsAction="always"
+		android:icon="@drawable/pause"
+		android:title="PAUSE"/> 
+	
+	<item 
+		android:id="@+id/STOP" 
+		android:orderInCategory="203" 
+		android:showAsAction="always"
+		android:icon="@drawable/stop"
+		android:title="STOP"/> 
 	
     <item
         android:id="@+id/item"
